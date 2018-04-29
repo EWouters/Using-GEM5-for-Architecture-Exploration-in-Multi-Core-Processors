@@ -245,7 +245,9 @@ Cache Size & Total Ticks\\
 
 \section{Experimenting with OpenMP, multithreading and multi-core architectures}
 
-To make good use of the multi-core architecture the EEG application has been modified like in the snippet below:
+The test code for the EEG application has been modified to run on a multi-core platform using the OpenMP API. For-loops that have no dependencies between iterations have been preceded by a statement to run the iterations in parallel. This has been done for every for-loop in the application and the validity of the multi-core program has been tested by compiling it natively and by running a simulation on the heterogeneous platform.
+
+An example of a modification is shown in the snippet below:
 
 \begin{lstlisting}
 #pragma omp parallel for
@@ -258,11 +260,9 @@ run_channel(DATAPOINTS, x[i], features[i]);
 \section{Heterogeneous Platform A15-A15-A9-A9}
 As a final experiment a heterogeneous multi-core platform consisting of two A15 cores and two A9 cores has been simulated. Each of the cores has a private L1 cache and the four cores use a shared L2 cache.
 
-The test code for the EEG application has been modified to run on a multi-core platform using the OpenMP API. For-loops that have no dependencies between iterations have been preceded by a statement to run the iterations in parallel. This has been done for every for-loop in the application and the validity of the multi-core program has been tested by compiling it natively and by running a simulation on the heterogeneous platform.
+The optimized values for the L1 cache have been chosen by finding the inflection point of the graphs in Figures \ref{fig:ex1_1} and \ref{fig:ticks_assoc}. For both the A15 and the A9 cores the optimal size of the cache is $1kB$. At the infliction point the trade-off between cost for larger cache and speed-up in number of cycles is optimal. The associativity is chosen as 2-way, because we see a large performance increase when the associativity is increased from 1 to 2, but the graph of Figure \ref{fig:ticks_assoc} becomes very flat after that point.
 
-The optimized values for the L1 cache have been chosen by finding the inflection point of the graphs in figures 1.1 and 2.2. For both the A15 and the A9 cores the optimal size of the cache is $1kB$. At the infliction point the trade-off between cost for larger cache and speed-up in number of cycles is optimal. The associativity is chosen as 2-way, because we see a large performance increase when the associativity is increased from 1 to 2, but the graph of figure 1.2 becomes very flat after that point.
-
-For the L2 cache we can see in figure 1.3 that the larger this cache is, the faster the eeg application will run. $16kB$ is a feasible size for the L2 cache of the heterogeneous platform.
+For the L2 cache we can see in Figure \ref{fig:A9_size} that the larger this cache is, the faster the EEG application will run. $16kB$ is a feasible size for the L2 cache of the heterogeneous platform.
 
 This platform performed 5.81 times faster on the EEG application than the single A9 core version and 1.27 times faster than the 3-core homogeneous A9 platform with comparable cache sizes.
 
@@ -284,7 +284,7 @@ This platform performed 5.81 times faster on the EEG application than the single
 
 
 
-\newpage
+%\newpage
 \onecolumn
 \section*{APPENDIX}
 
