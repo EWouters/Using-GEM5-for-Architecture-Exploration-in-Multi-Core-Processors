@@ -22,6 +22,7 @@
 \usepackage{amsmath} % assumes amsmath package installed
 \usepackage{amssymb}  % assumes amsmath package installed
 \usepackage{hyperref}
+\usepackage{listings}
 
 \graphicspath{ {files/} }
 
@@ -56,24 +57,22 @@ the following keys were searched in order to study performance:
 Throughout this report there are tables and figures which have been created using the \texttt{stats.txt} output of the GEM5 simulator. The following keys from the file are the most notable:
 \begin{itemize}
     \item sim\_seconds: Number of seconds simulated
-    \item system.cpu.icache.overall_mshr_miss_rate::total
-    \item system.cpu.dcache.overall_mshr_miss_rate::total
-    \item system.l2.overall_miss_rate::total
-    \item system.cpu.icache.overall_avg_mshr_miss_latency::total
-    \item system.cpu.dcache.overall_avg_mshr_miss_latency::total
-    \item system.l2.overall_avg_miss_latency::total
+    \item system.cpu.icache.overall\_mshr\_miss\_rate::total
+    \item system.cpu.dcache.overall\_mshr\_miss\_rate::total
+    \item system.l2.overall\_miss\_rate::total
+    \item system.cpu.icache.overall\_avg\_mshr\_miss\_latency::total
+    \item system.cpu.dcache.overall\_avg\_mshr\_miss\_latency::total
+    \item system.l2.overall\_avg\_miss\_latency::total
 \end{itemize}
 
+The miss rates and miss latencies are determined from the Miss Status Handling Registers (MSHR). These latencies and miss rates provide insight in how long the processor has to stall when there is a cache miss.
 
-
-
-• sim_seconds: Number of seconds simulated
-• .dcache.tags.occ_percent::total (for every CPU): Average
-percentage of data cache occupancy
-• .icache.tags.occ_percent::total (for every CPU): Average
-percentage of instruction cache occupancy
-• l2.tags.occ_percent::total: Average percentage of L2
-cache occupancy
+%These keys can be used to compute the Average memory access time (AMAT) using the formula
+%
+%\[
+%    AMAT_{L1} = Hit Time_{L1} + Miss Rate_{L1} \dot \]\[
+%    (Hit Time_{L2} + Miss Rate_{L2} + Miss Penalty_{L2})
+%\]
 
 \section{ARM A9}
 
@@ -125,11 +124,11 @@ Cache Size & Total Ticks\\
 
 \subsection{Associativity Level}
 
-To determine the impact of the associativity the L1 instruction and data cache size is set to a constant $2kB$, while still keeping the L2 cache disabled (to restrict the number of free variables). Then the associativity is varied between $1$ and $8$ in steps of powers of two because if non-powers of two are used the tag sizes will not line up nicely. 
+To determine the impact of the associativity the L1 instruction and data cache size is set to a constant $2kB$, while still keeping the L2 cache disabled (to restrict the number of free variables). Then the associativity is varied between $1$ and $8$ in steps of powers of two because if non-powers of two are used the tag sizes will not line up nicely. Table \ref{tab:ticks_assoc} and \ref{fig:ticks_assoc} show that increasing the associativity from one to two gives the best relative speedup, while increasing it further provides a more marginal speedup.
 
 \begin{table}[h]
 \caption{ARM A9 - L1 Associativity vs. Total Ticks}
-\label{table_example}
+\label{tab:ticks_assoc}
 \begin{center}
 \begin{tabular}{|c||c|}
 \hline
@@ -158,12 +157,11 @@ Associativity & Total Ticks\\
 
 \subsection{L2 Cache Size}
 
-To explore the differences between varying the L1 and L2 cache sizes, the direct mapped L2 cache size is varied while the L1 cache sizes are now held constant. The performance is then analyzed with respect to the total processor ticks.
-
+To explore the differences between varying the L1 and L2 cache sizes, a direct mapped L2 cache size is varied while the L1 cache sizes are now held constant. Table \ref{tab:A9_size} and Figure \ref{fig:A9_size} show a very linear decrease in the execution time when the L2 cache size is increased logarithmically. This implies that the more L2 cache is added, the lower the execution time. This relation will come to a halt when the cache size approaches the size of the input data however.
 
 \begin{table}[h]
 \caption{ARM A9 - L1 Cache Size vs. Total Ticks}
-\label{tab:A9}
+\label{tab:A9_size}
 \begin{center}
 \begin{tabular}{|c||c|}
 \hline
@@ -177,14 +175,14 @@ Cache Size & Total Ticks\\
 \end{center}
 \end{table}
 
-\begin{figure}[thpb]
+\begin{figure}[htb]
 \centering
 \includegraphics[scale=.5]{ex1_3.png}
 \caption{Impact on number of ticks by varying the L2 cache size}
-\label{figurelabel}
+\label{fig:A9_size}
 \end{figure}
 
-\pagebreak
+%\pagebreak
 
 \section{ARM A15}
 
@@ -245,16 +243,28 @@ Cache Size & Total Ticks\\
 \label{figure2_2}
 \end{figure}
 
+\section{Experimenting with OpenMP, multithreading and multi-core architectures}
+
+To make good use of the multi-core architecture the EEG application has been modified like in the snippet below:
+
+\begin{lstlisting}
+#pragma omp parallel for
+for (i = 0; i < CHANNELS; i++) {
+printf("Running channel %d...\n", i);
+run_channel(DATAPOINTS, x[i], features[i]);
+}
+\end{lstlisting}
+
 \section{Heterogeneous Platform A15-A15-A9-A9}
 As a final experiment a heterogeneous multi-core platform consisting of two A15 cores and two A9 cores has been simulated. Each of the cores has a private L1 cache and the four cores use a shared L2 cache.
 
-The test code for the eeg application has been modified to run on a multi-core platform using the OpenMP API. For-loops that have no dependencies between iterations have been preceded by a statement to run the iterations in parallel. This has been done for every for-loop in the application and the validity of the multi-core program has been tested by compiling it natively and by running a simulation on the heterogeneous platform.
+The test code for the EEG application has been modified to run on a multi-core platform using the OpenMP API. For-loops that have no dependencies between iterations have been preceded by a statement to run the iterations in parallel. This has been done for every for-loop in the application and the validity of the multi-core program has been tested by compiling it natively and by running a simulation on the heterogeneous platform.
 
 The optimized values for the L1 cache have been chosen by finding the inflection point of the graphs in figures 1.1 and 2.2. For both the A15 and the A9 cores the optimal size of the cache is $1kB$. At the infliction point the trade-off between cost for larger cache and speed-up in number of cycles is optimal. The associativity is chosen as 2-way, because we see a large performance increase when the associativity is increased from 1 to 2, but the graph of figure 1.2 becomes very flat after that point.
 
 For the L2 cache we can see in figure 1.3 that the larger this cache is, the faster the eeg application will run. $16kB$ is a feasible size for the L2 cache of the heterogeneous platform.
 
-This platform performed 5.81 times faster on the eeg application than the single A9 core version and 1.27 times faster than the 3-core homogeneous A9 platform with comparable cache sizes.
+This platform performed 5.81 times faster on the EEG application than the single A9 core version and 1.27 times faster than the 3-core homogeneous A9 platform with comparable cache sizes.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
