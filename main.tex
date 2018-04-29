@@ -16,11 +16,12 @@
 
 % The following packages can be found on http:\\www.ctan.org
 \usepackage{graphicx} % for pdf, bitmapped graphics files
-%\usepackage{epsfig} % for postscript graphics files
-%\usepackage{mathptmx} % assumes new font selection scheme installed
-%\usepackage{times} % assumes new font selection scheme installed
-%\usepackage{amsmath} % assumes amsmath package installed
-%\usepackage{amssymb}  % assumes amsmath package installed
+\usepackage{epsfig} % for postscript graphics files
+\usepackage{mathptmx} % assumes new font selection scheme installed
+\usepackage{times} % assumes new font selection scheme installed
+\usepackage{amsmath} % assumes amsmath package installed
+\usepackage{amssymb}  % assumes amsmath package installed
+\usepackage{hyperref}
 
 \graphicspath{ {files/} }
 
@@ -38,24 +39,51 @@ Erik Wouters (1325892)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{abstract}
-
-Using GEM5, multi-core processors can be emulated allowing analysis and comparison by adjusting different parameters and factors. This project is primarily designed to enable users to create optimized ARM processors using a simulator. A broad range of algorithms can be utilized or created. Implementation also consists of using OpenMP, an API for shared-memory parallel programming.
+In this report the multi-core optimization of an EEG application written in C is explored using simulated ARM A9 and A15 cores on the GEM5 platform. The impact of different design parameters such which cores to use and the L1 and L2 cache sizes. The optimization requirement is to minimize execution time while taking the consequences with respect to chip area and energy consumption into consideration by comparing the Energy Delay Area Product (EDAP).
 
 \end{abstract}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Introduction}
-In this report
+Using GEM5\cite{gem5}, multi-core processors can be emulated allowing analysis and comparison by adjusting different parameters and factors. This project is primarily designed to enable users to create optimized ARM processors using a simulator. A broad range of algorithms can be utilized or created. The implementation also consists of using OpenMP\cite{openmp}, an API for shared-memory parallel programming.
+
+Throughout the report there are shown tables and
+graphs of which the data for them is sourced from a
+stats.txt file that GEM5 is outputting. In such a file,
+the following keys were searched in order to study performance:
+
+
+Throughout this report there are tables and figures which have been created using the \texttt{stats.txt} output of the GEM5 simulator. The following keys from the file are the most notable:
+\begin{itemize}
+    \item sim\_seconds: Number of seconds simulated
+    \item system.cpu.icache.overall_mshr_miss_rate::total
+    \item system.cpu.dcache.overall_mshr_miss_rate::total
+    \item system.l2.overall_miss_rate::total
+    \item system.cpu.icache.overall_avg_mshr_miss_latency::total
+    \item system.cpu.dcache.overall_avg_mshr_miss_latency::total
+    \item system.l2.overall_avg_miss_latency::total
+\end{itemize}
+
+
+
+
+• sim_seconds: Number of seconds simulated
+• .dcache.tags.occ_percent::total (for every CPU): Average
+percentage of data cache occupancy
+• .icache.tags.occ_percent::total (for every CPU): Average
+percentage of instruction cache occupancy
+• l2.tags.occ_percent::total: Average percentage of L2
+cache occupancy
 
 \section{ARM A9}
 
 \subsection{L1 Cache Size}
 
-The first experiment is to disable the L2 cache and change the L1 instruction and data cache size. This allows for performance analysis with respect to adjustments in cache sizes. 
+To measure the impact of the L1 cache size on the execution time of the EEG application the L2 cache has been disabled and the L1 instruction and data cache size was varied between $64B$ and $64kB$ in steps of powers of two. This allows for performance analysis with respect to adjustments in cache sizes. Table \ref{tab:A9_L1} and \ref{fig:ex1_1} show the performance of the EEG application. It can be observed that a bigger cache size results in a smaller run-time. This is to be expected because with a bigger cache there will be fewer compulsory cache misses. The steepest point of the graph is found at around $512B$. The improvement slows down above $2kB$, so for this application having a L1 cache size of about $1kB$ to $2kB$ would give good results. If the cache size would be bigger the speedup would be cancelled out by the increase in area and energy, so the EDAP would not increase.
 
 \begin{table}[h]
-\caption{ARM A9 - L1 Cache Size and Total Ticks}
-\label{table_example}
+\caption{ARM A9 - L1 Cache Size vs. Total Ticks}
+\label{tab:A9_L1}
 \begin{center}
 \begin{tabular}{|c||c|}
 \hline
@@ -92,15 +120,15 @@ Cache Size & Total Ticks\\
 \centering
 \includegraphics[scale=.5]{ex1_1.png}
 \caption{Impact on number of ticks by varying the L1 cache size}
-\label{figurelabel}
+\label{fig:ex1_1}
 \end{figure}
 
 \subsection{Associativity Level}
 
-The next task is the set the L1 instruction and data cache sizes to a constant 2kB, while keeping the L2 cache disabled. Then the associativity is varied by the power, $n^2$, as non-squared powers deliver invalid results (and empty stat.txt files). 
+To determine the impact of the associativity the L1 instruction and data cache size is set to a constant $2kB$, while still keeping the L2 cache disabled (to restrict the number of free variables). Then the associativity is varied between $1$ and $8$ in steps of powers of two because if non-powers of two are used the tag sizes will not line up nicely. 
 
 \begin{table}[h]
-\caption{ARM A9 - L1 Associativity and Total Ticks}
+\caption{ARM A9 - L1 Associativity vs. Total Ticks}
 \label{table_example}
 \begin{center}
 \begin{tabular}{|c||c|}
@@ -125,7 +153,7 @@ Associativity & Total Ticks\\
 \centering
 \includegraphics[scale=.5]{ex1_2.png}
 \caption{Impact on number of ticks by varying the associativity level}
-\label{figurelabel}
+\label{fig:ticks_assoc}
 \end{figure}
 
 \subsection{L2 Cache Size}
@@ -134,29 +162,17 @@ To explore the differences between varying the L1 and L2 cache sizes, the direct
 
 
 \begin{table}[h]
-\caption{ARM A9 - L1 Associativity and Total Ticks}
-\label{table_example}
+\caption{ARM A9 - L1 Cache Size vs. Total Ticks}
+\label{tab:A9}
 \begin{center}
 \begin{tabular}{|c||c|}
 \hline
 Cache Size & Total Ticks\\
 \hline
-2kB
- & 1.03179E+12
-\\
-\hline
-4kB
- & 9.60558E+11
-\\
-\hline
-8kB
- & 9.0899E+11
-\\
-\hline
-16kB
- & 8.55049E+11
-\\
-\hline
+2kB & 1.03179E+12 \\ \hline
+4kB & 9.60558E+11 \\ \hline
+8kB & 9.08990E+11 \\ \hline
+16kB & 8.55049E+11 \\ \hline
 \end{tabular}
 \end{center}
 \end{table}
@@ -178,7 +194,7 @@ The ARM A15 is simulated by using an out-of-order CPU that utilizes decoding, is
 
 \begin{table}[h]
 \caption{ARM A15 - L1 Cache Size and Total Ticks}
-\label{table_example}
+\label{tab:A15}
 \begin{center}
 \begin{tabular}{|c||c|}
 \hline
@@ -241,6 +257,23 @@ For the L2 cache we can see in figure 1.3 that the larger this cache is, the fas
 This platform performed 5.81 times faster on the eeg application than the single A9 core version and 1.27 times faster than the 3-core homogeneous A9 platform with comparable cache sizes.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\begin{thebibliography}{99}
+
+\bibitem{gem5} Nathan Binkert, Bradford Beckmann, Gabriel Black, Steven K. Reinhardt, Ali Saidi, Arkaprava Basu, Joel Hestness, Derek R. Hower, Tushar Krishna, Somayeh Sardashti, Rathijit Sen, Korey Sewell, Muhammad Shoaib, Nilay Vaish, Mark D. Hill, and David A. Wood. 2011. The gem5 simulator. SIGARCH Comput. Archit. News 39, 2 (August 2011), 1-7. DOI=\url{http://dx.doi.org/10.1145/2024716.2024718}
+
+\bibitem{openmp} Dagum, Leonardo, and Ramesh Menon. "OpenMP: an industry standard API for shared-memory programming." Computational Science \& Engineering, IEEE 5.1 (1998): 46-55.
+
+
+
+\end{thebibliography}
+
+
+
+
+
+
 \newpage
 \onecolumn
 \section*{APPENDIX}
